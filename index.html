@@ -95,14 +95,13 @@ footer{margin-top:36px;color:var(--dim);font-size:11.5px;text-align:center;borde
   <div class="sb" id="group-area">
     <div class="row" style="margin-top:6px">
       <button class="ghost sm" id="add-group">＋ 그룹 추가 (최대 5)</button>
-      <button class="ghost sm" id="show-match">매칭 현황</button>
     </div>
   </div>
 </div>
 
 <!-- ② 설정 -->
 <div class="step">
-  <div class="step-h"><span class="sn">2</span><span class="st">분석 설정</span><span class="sd">필터 · FFT 구간 · 지표 · 종단 그룹</span></div>
+  <div class="step-h"><span class="sn">2</span><span class="st">분석 설정</span><span class="sd">필터 · FFT 구간 · 카테고리 · 지표</span></div>
   <div class="sb">
     <div class="ctrl">
       <div class="cg">
@@ -144,13 +143,6 @@ footer{margin-top:36px;color:var(--dim);font-size:11.5px;text-align:center;borde
     </div>
     <div class="ctrl">
       <div class="cg">
-        <span class="lbl">종단 그룹</span>
-        <div class="inner">
-          <span style="font-size:12px;color:var(--dim)">Acute</span><select id="acute-sel" style="width:150px"></select>
-          <span style="font-size:12px;color:var(--dim)">Follow-up</span><select id="fu-sel" style="width:150px"></select>
-        </div>
-      </div>
-      <div class="cg">
         <span class="lbl">다중비교 보정</span>
         <div class="rrow">
           <label><input type="radio" name="corr" value="bonferroni" checked> Bonferroni</label>
@@ -180,11 +172,9 @@ footer{margin-top:36px;color:var(--dim);font-size:11.5px;text-align:center;borde
         <div class="tabs" id="chart-tabs">
           <button class="tab on" data-p="p6">Fig 6 사람평균</button>
           <button class="tab" data-p="p5">Fig 5 전체임펄스</button>
-          <button class="tab" data-p="p9">Fig 9 궤적</button>
           <button class="tab" data-p="p10">Fig 10 Gain/FFT</button>
           <button class="tab" data-p="p11">Fig 11 Scatter</button>
           <button class="tab" data-p="pe">효과크기 r</button>
-          <button class="tab" data-p="pd">Paired Δ%</button>
         </div>
         <div class="panel on" id="p6">
           <div class="clbl">사람별 평균 — 막대=평균, 점=개별 환자 · 임펄스단위보다 신뢰도 높음</div>
@@ -197,15 +187,6 @@ footer{margin-top:36px;color:var(--dim);font-size:11.5px;text-align:center;borde
           <div class="legend" id="leg5"></div>
           <div class="cwrap" style="height:270px"><canvas id="cv5" role="img" aria-label="전체임펄스 비교"></canvas></div>
           <div class="pnote" id="pn5"></div>
-        </div>
-        <div class="panel" id="p9">
-          <div class="clbl">개인별 회복 궤적 — 회색=개인선, 빨강=그룹 평균선</div>
-          <div class="g2" id="traj-grid">
-            <div><div class="clbl" id="tl0"></div><div class="cwrap" style="height:220px"><canvas id="tr0" role="img" aria-label="궤적 1"></canvas></div><div class="pnote" id="tp0"></div></div>
-            <div><div class="clbl" id="tl1"></div><div class="cwrap" style="height:220px"><canvas id="tr1" role="img" aria-label="궤적 2"></canvas></div><div class="pnote" id="tp1"></div></div>
-            <div><div class="clbl" id="tl2"></div><div class="cwrap" style="height:220px"><canvas id="tr2" role="img" aria-label="궤적 3"></canvas></div><div class="pnote" id="tp2"></div></div>
-            <div><div class="clbl" id="tl3"></div><div class="cwrap" style="height:220px"><canvas id="tr3" role="img" aria-label="궤적 4"></canvas></div><div class="pnote" id="tp3"></div></div>
-          </div>
         </div>
         <div class="panel" id="p10">
           <div class="clbl">Power Ratio vs Gain 병렬 — 같은 카테고리에서 PR 유의 &amp; Gain 비유의 → FFT 우월성 증거</div>
@@ -232,18 +213,12 @@ footer{margin-top:36px;color:var(--dim);font-size:11.5px;text-align:center;borde
           <div class="cwrap" style="height:230px"><canvas id="cve" role="img" aria-label="효과크기 r"></canvas></div>
           <div class="pnote" id="pne"></div>
         </div>
-        <div class="panel" id="pd">
-          <div class="clbl">Paired Δ% — 급성기→회복기 변화율 · 파랑=선택지표, 주황=Gain</div>
-          <div class="cwrap" style="height:230px"><canvas id="cvd" role="img" aria-label="Paired 변화율"></canvas></div>
-          <div class="pnote" id="pnd"></div>
-        </div>
       </div>
       <div class="sect">
         <div class="sect-t">내보내기</div>
         <div class="exp-row">
           <button class="act sm" id="dl-json">📄 JSON 리포트</button>
           <button class="ghost sm" id="dl-subj">📋 사람별 CSV</button>
-          <button class="ghost sm" id="dl-pair">🔗 Paired CSV</button>
           <button class="ghost sm" id="dl-stat">📊 통계표 CSV</button>
           <button class="ghost sm" id="dl-prompt">📝 해석 프롬프트</button>
           <button class="ghost sm" id="toggle-raw">JSON 보기</button>
@@ -253,7 +228,7 @@ footer{margin-top:36px;color:var(--dim);font-size:11.5px;text-align:center;borde
     </div>
   </div>
 </div>
-<footer>vhit_core.py · Pyodide WASM · 정적 호스팅 전용 · 데이터 무전송<br><span class="muted">Fig 5/6/9/10/11 · 필터 · 4/2분할 · Power/Area Ratio · 사람별·Paired·통계표 CSV</span></footer>
+<footer>vhit_core.py · Pyodide WASM · 정적 호스팅 전용 · 데이터 무전송<br><span class="muted">Fig 5/6/10/11 · 필터 · 4/2분할 · Power/Area Ratio · 사람별·통계표 CSV</span></footer>
 </div>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -261,7 +236,7 @@ footer{margin-top:36px;color:var(--dim);font-size:11.5px;text-align:center;borde
 const PAL=['#4fb0c6','#e0833b','#70ad47','#9b59b6','#e74c3c'];
 let pyodide=null,coreLoaded=false;
 const groups=[{name:'HC',files:null},{name:'VN acute',files:null}];
-let _rep=null,_cd=null,_csvSubj='',_csvPair='',_csvStat='';
+let _rep=null,_cd=null,_csvSubj='',_csvStat='';
 const CI={};
 const INK='#8b97a6',GRID='rgba(47,59,74,0.8)',BG='#1a212b';
 
@@ -324,39 +299,18 @@ function renderGroups(){
     row.innerHTML=`<span class="dot" style="background:${g.color}"></span><input type="text" value="${g.name}" data-i="${i}" class="gname"><label class="file-btn">폴더 선택<input type="file" webkitdirectory directory multiple data-i="${i}" class="gfiles"></label><span class="gstat${g.files?' ok':''}" id="gs-${i}">${g.files?g.files.length+'개 CSV 선택됨':'미선택'}</span>`;
     area.insertBefore(row,addBtn);
   });
-  area.querySelectorAll('.gname').forEach(inp=>inp.onchange=e=>{groups[+e.target.dataset.i].name=e.target.value.trim();syncSels();});
+  area.querySelectorAll('.gname').forEach(inp=>inp.onchange=e=>{groups[+e.target.dataset.i].name=e.target.value.trim();updateRun();});
   area.querySelectorAll('.gfiles').forEach(inp=>inp.onchange=e=>{
     const csvs=Array.from(e.target.files).filter(f=>f.name.toLowerCase().endsWith('.csv'));
     groups[+e.target.dataset.i].files=csvs;
     const el=document.getElementById('gs-'+e.target.dataset.i);
     el.className='gstat'+(csvs.length?' ok':'');
     el.textContent=csvs.length?csvs.length+'개 CSV':'CSV 없음';
-    syncSels();updateRun();
+    updateRun();
   });
-  syncSels();updateRun();
+  updateRun();
 }
 document.getElementById('add-group').onclick=()=>{if(groups.length>=5)return;groups.push({name:`Group ${groups.length+1}`,files:null});renderGroups();};
-document.getElementById('show-match').onclick=()=>{
-  if(!_rep){alert('먼저 분석 실행');return;}
-  const lp=_rep.longitudinal_paired_analysis;
-  if(!lp){alert('종단 데이터 없음');return;}
-  const n=lp.metrics?.PowerRatio?.['HIMP Left']?.n_pairs??0;
-  alert(`Acute: ${lp.acute_group}\nFollow-up: ${lp.followup_group}\n매칭 성공: ${n}명\n\n스킵 사유: ${_rep._paired_skipped_reason||'없음'}`);
-};
-function syncSels(){
-  const loaded=groups.filter(g=>g.files&&g.files.length).map(g=>g.name);
-  ['acute-sel','fu-sel'].forEach(id=>{
-    const sel=document.getElementById(id),cur=sel.value;
-    sel.innerHTML=loaded.map(g=>`<option value="${g}">${g}</option>`).join('');
-    if(loaded.includes(cur))sel.value=cur;
-  });
-  const isFu=n=>/follow|f\/u|fu|recover|회복|post/i.test(n);
-  const isCtrl=n=>/hc|normal|control|정상|healthy/i.test(n);
-  const fuSel=document.getElementById('fu-sel'),aSel=document.getElementById('acute-sel');
-  const fuC=loaded.find(g=>isFu(g));if(fuC)fuSel.value=fuC;
-  const nonC=loaded.filter(g=>!isCtrl(g));
-  const aC=nonC.find(g=>g!==fuSel.value);if(aC)aSel.value=aC;
-}
 function updateRun(){document.getElementById('run').disabled=!coreLoaded||!groups.some(g=>g.files&&g.files.length);}
 
 async function boot(){
@@ -410,29 +364,25 @@ json.dumps({'name':str(js_gn),'n_files':_r['n_files'],'n_impulses':_r['n_impulse
     const tP=parseFloat(document.getElementById('trim-pct').value)||5;
     const merged=document.querySelector('input[name="cat"]:checked').value==='merged';
     const dk=document.getElementById('metric').value;
-    const acG=document.getElementById('acute-sel').value||'';
-    const fuG=document.getElementById('fu-sel').value||'';
     pyodide.globals.set('js_active',active.map(g=>g.name));
     pyodide.globals.set('js_fon',fOn);pyodide.globals.set('js_mv',mV);pyodide.globals.set('js_mr',mR);
     pyodide.globals.set('js_gf',gF);pyodide.globals.set('js_ut',uT);pyodide.globals.set('js_tp',tP);
     pyodide.globals.set('js_mg',merged);pyodide.globals.set('js_dk',dk);
-    pyodide.globals.set('js_ag',acG);pyodide.globals.set('js_fg',fuG);
     pyodide.globals.set('js_lo2',low);pyodide.globals.set('js_hi2',high);
     const combined=pyodide.runPython(`
 import json
 vc.assign_visit_orders(ALL_IMP)
 _act=[str(g) for g in js_active.to_py()]
 _vld=vc.apply_filter(ALL_IMP,active=bool(js_fon),min_head_vel=float(js_mv),max_ratio=float(js_mr),gain_filter=bool(js_gf))
-_mg=bool(js_mg);_dk=str(js_dk);_ag=str(js_ag);_fg=str(js_fg)
-_rep=vc.build_report(_vld,_act,_ag,_fg,merged=_mg,fft_low=float(js_lo2),fft_high=float(js_hi2),filter_active=bool(js_fon),use_trim=bool(js_ut),trim_pct=float(js_tp),tool_version='vhit_web_v2')
-_cd=vc.build_chart_data(_vld,_act,_ag,_fg,dk=_dk,merged=_mg)
+_mg=bool(js_mg);_dk=str(js_dk)
+_rep=vc.build_report(_vld,_act,'','',merged=_mg,fft_low=float(js_lo2),fft_high=float(js_hi2),filter_active=bool(js_fon),use_trim=bool(js_ut),trim_pct=float(js_tp),tool_version='vhit_web_v2')
+_cd=vc.build_chart_data(_vld,_act,'','',dk=_dk,merged=_mg)
 _sc=vc.make_subject_csv(_vld,_act,merged=_mg)
-_pc=vc.make_paired_csv(_vld,_act,_ag,_fg,merged=_mg)
 _stc=vc.make_stat_csv(_rep)
-json.dumps({'report':_rep,'cd':_cd,'sc':_sc,'pc':_pc,'stc':_stc},ensure_ascii=False,allow_nan=False)
+json.dumps({'report':_rep,'cd':_cd,'sc':_sc,'stc':_stc},ensure_ascii=False,allow_nan=False)
     `);
     const obj=JSON.parse(combined);
-    _rep=obj.report;_cd=obj.cd;_csvSubj=obj.sc;_csvPair=obj.pc;_csvStat=obj.stc;
+    _rep=obj.report;_cd=obj.cd;_csvSubj=obj.sc;_csvStat=obj.stc;
     renderResult(_rep,sums,active.map(g=>g.name),dk,merged);
     st.textContent='완료 ✓';
   }catch(e){st.innerHTML=`<span class="err-txt">실패: ${e}</span>`;console.error(e);}
@@ -460,25 +410,13 @@ function renderResult(rep,sums,active,dk,merged){
     });
     st+='</table>';
   }
-  const lp=rep.longitudinal_paired_analysis;
-  if(lp?.metrics){
-    st+=`<div style="font-weight:600;margin:12px 0 5px">종단 Paired — ${lp.acute_group} → ${lp.followup_group}</div>`;
-    st+=`<table class="stat"><tr><th>지표·카테고리</th><th>n쌍</th><th>Δ%</th><th>Wilcoxon p</th><th>r</th></tr>`;
-    for(const m of['PowerRatio','Gain'])for(const[cat,d]of Object.entries(lp.metrics[m]||{})){
-      if(!d.n_pairs)continue;
-      st+=`<tr><td>${m}·${cat}</td><td class="num">${d.n_pairs}</td><td class="num">${d.delta_pct!=null?d.delta_pct+'%':'–'}</td><td class="num ${sClass(d.wilcoxon_p)}">${pFmt(d.wilcoxon_p)}</td><td class="num">${d.wilcoxon_r!=null?d.wilcoxon_r.toFixed(2):'–'}</td></tr>`;
-    }
-    st+='</table>';
-  }else if(rep._paired_skipped_reason){
-    st+=`<div class="muted" style="margin-top:8px">종단 미수행: ${rep._paired_skipped_reason}</div>`;
-  }
   document.getElementById('stat-tbl').innerHTML=st;
   document.getElementById('raw-json').textContent=JSON.stringify(rep,null,2);
   renderCharts(rep,_cd,active,dk,merged);
 }
 
 function renderCharts(rep,cd,active,dk,merged){
-  const ds=rep.descriptive_statistics;const gc=rep.group_comparisons;const lp=rep.longitudinal_paired_analysis;
+  const ds=rep.descriptive_statistics;const gc=rep.group_comparisons;
   const mKey=dk==='ratio'?'PowerRatio':'AreaRatio';const mLbl=dk==='ratio'?'Power Ratio':'Area Ratio';
   const cats=merged?['HIMP (L+R)','SHIMP (L+R)']:['HIMP Left','HIMP Right','SHIMP Left','SHIMP Right'];
   const catS=merged?['HIMP','SHIMP']:['HIMP L','HIMP R','SHIMP L','SHIMP R'];
@@ -513,28 +451,7 @@ function renderCharts(rep,cd,active,dk,merged){
   mkChart('cv5','bar',{labels:catS,datasets:barJitter(mKey,cd?.impulse_values||{})},{...baseOpts(mLbl+' (impulse mean)')});
   document.getElementById('pn5').innerHTML=pNote(mKey,'all_impulses');
 
-  // Fig 9
-  if(lp&&cd?.paired_trajectories){
-    cats.forEach((cat,ci)=>{
-      const tlEl=document.getElementById('tl'+ci);const tpEl=document.getElementById('tp'+ci);
-      if(tlEl)tlEl.textContent=cat;
-      const traj=cd.paired_trajectories[cat];
-      if(!traj||!traj.patients.length){if(tpEl)tpEl.textContent='매칭 없음';return;}
-      const pts=traj.patients;
-      const xLbls=[lp.acute_group,lp.followup_group];
-      const dsets=pts.map(p=>({type:'line',label:p.name,data:[{x:0,y:p.acute},{x:1,y:p.fu}],borderColor:'#ffffff20',backgroundColor:'transparent',pointBackgroundColor:'#ffffff50',pointRadius:4,tension:0,borderWidth:1}));
-      const aM=pts.reduce((s,p)=>s+p.acute,0)/pts.length;
-      const fM=pts.reduce((s,p)=>s+p.fu,0)/pts.length;
-      dsets.push({type:'line',label:'Mean',data:[{x:0,y:aM},{x:1,y:fM}],borderColor:'#e05a4e',backgroundColor:'transparent',pointBackgroundColor:'#e05a4e',pointRadius:7,tension:0,borderWidth:3});
-      const opts={...baseOpts(mLbl)};
-      opts.scales.x={type:'linear',min:-0.3,max:1.3,ticks:{color:INK,font:{size:10},stepSize:1,callback:v=>xLbls[v]||''},grid:{color:GRID}};
-      mkChart('tr'+ci,'line',{labels:xLbls,datasets:dsets},opts);
-      const s=lp.metrics[mKey]?.[cat];
-      const pStr=s?.wilcoxon_p!=null?`p=${s.wilcoxon_p.toFixed(4)} r=${(s.wilcoxon_r||0).toFixed(2)}`:'n<4';
-      const dPct=s?.delta_pct!=null?`Δ${s.delta_pct>0?'+':''}${s.delta_pct}%`:'';
-      if(tpEl)tpEl.textContent=`n=${pts.length}쌍 · ${pStr} · ${dPct}`;
-    });
-  }else{document.getElementById('tp0').textContent='종단 Paired 데이터 없음';}
+  // Fig 9 및 Paired Δ% 제거됨
 
   // Fig 10
   mkLegend('leg10',active);
@@ -570,20 +487,10 @@ function renderCharts(rep,cd,active,dk,merged){
     mkChart('cve','bar',{labels:catS,datasets:dsets},opts,[refPl]);
     document.getElementById('pne').innerHTML=plArr.map((pl,pi)=>cats.map((cat,ci)=>{const pw=(sm[cat]?.pairwise||[]).find(p=>`${p.group1}↔${p.group2}`===pl);return pw?`${catS[ci]} ${pStar(pw.p_adj)}`:''}).filter(Boolean).join(' ')).join(' | ');
   }}
-
-  // Paired Δ%
-  {if(lp?.metrics){
-    const mC=['#4fb0c6','#e0833b'];
-    const dsets=[mKey,'Gain'].map((m,mi)=>({label:mi===0?mLbl:'Gain',data:cats.map(cat=>lp.metrics[m]?.[cat]?.delta_pct??null),backgroundColor:cats.map(cat=>{const v=lp.metrics[m]?.[cat]?.delta_pct??0;return mC[mi]+(v>=0?'cc':'55');}),borderColor:mC[mi],borderWidth:1}));
-    mkChart('cvd','bar',{labels:catS,datasets:dsets},{...baseOpts('Δ%')},[hLine(0,'#4fb0c6aa',[1,0])]);
-    const nP=lp.metrics[mKey]?.['HIMP Left']?.n_pairs??lp.metrics[mKey]?.[cats[0]]?.n_pairs??0;
-    document.getElementById('pnd').innerHTML=`${lp.acute_group}→${lp.followup_group} · ${nP}쌍 · ${nP>=4?'Wilcoxon 수행':'n<4(방향만 참고)'}<br>`+cats.map((cat,ci)=>{const pr=lp.metrics[mKey]?.[cat];const ga=lp.metrics.Gain?.[cat];return pr?`${catS[ci]} ${mLbl}:${pr.delta_pct!=null?pr.delta_pct+'%':'–'} Gain:${ga?.delta_pct!=null?ga.delta_pct+'%':'–'}`:'';}).filter(Boolean).join(' | ');
-  }else{document.getElementById('pnd').textContent='종단 데이터 없음';}}
 }
 
 document.getElementById('dl-json').onclick=()=>_rep&&dl('vHIT_analysis_claude.json',JSON.stringify(_rep,null,2));
 document.getElementById('dl-subj').onclick=()=>_csvSubj&&dl('PerSubject_FFT_Values.csv',_csvSubj);
-document.getElementById('dl-pair').onclick=()=>_csvPair&&dl('Paired_Analysis.csv',_csvPair);
 document.getElementById('dl-stat').onclick=()=>_csvStat&&dl('Stat_Table.csv',_csvStat);
 document.getElementById('dl-prompt').onclick=()=>{
   if(!_rep)return;
