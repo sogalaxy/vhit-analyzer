@@ -772,3 +772,190 @@ def build_report(valid, active, acute_g, fu_g, *, merged=False,
         "_paired_skipped_reason": paired_skipped_reason,
     }
     return _sanitize(report)
+
+
+# ══════════════════════════════════════════════════════════════
+# 차트·CSV용 추가 데이터 추출 (웹 전환 추가분)
+# ══════════════════════════════════════════════════════════════
+
+def get_impulse_sample(valid, active, dk, merged=False, n_max=300):
+    """Fig 5 jitter용: 그룹/카테고리별 임펄스 값 샘플 (최대 n_max)."""
+    cat_defs = get_cat_defs(merged)
+    rng = np.random.default_rng(42)
+    result = {}
+    for g in active:
+        result[g] = {}
+        for _, t, d in cat_defs:
+            ck = cat_label(t, d)
+            vals = [float(i[dk]) for i in valid if i['group'] == g
+                    and i['type'] == t and match_dir(i['direction'], d)]
+            if len(vals) > n_max:
+                vals = rng.choice(vals, n_max, replace=False).tolist()
+            result[g][ck] = vals
+    return result
+
+
+def get_subject_values(valid, active, dk, merged=False):
+    """Fig 6 jitter용: 환자별 평균값."""
+    cat_defs = get_cat_defs(merged)
+    result = {}
+    for g in active:
+        result[g] = {}
+        files = sorted(set(i['filename'] for i in valid if i['group'] == g))
+        for _, t, d in cat_defs:
+            ck = cat_label(t, d)
+            vals = []
+            for f in files:
+                vs = [float(i[dk]) for i in valid if i['group'] == g
+                      and i['filename'] == f and i['type'] == t
+                      and match_dir(i['direction'], d)]
+                if vs:
+                    vals.append(float(np.mean(vs)))
+            result[g][ck] = vals
+    return result
+
+
+def get_paired_trajectories(valid, acute_g, fu_g, dk='ratio', merged=False):
+    """Fig 9 개인 궤적: paired 환자별 (acute, fu) 값 + 경과일."""
+    paired = get_paired_data(valid, acute_g, fu_g, dk, merged)
+    result = {}
+    for cat, data in paired.items():
+        patients = []
+        for n, a, f in zip(data['names'], data['acute'], data['fu']):
+            dd = [i.get('days_from_first_global', 0) for i in valid
+                  if i['group'] == fu_g and i['patient_name'] == n]
+            days = int(np.mean(dd)) if dd else 0
+            patients.append({'name': str(n), 'acute': float(a),
+                             'fu': float(f), 'days': days})
+        result[cat] = {
+            'patients': patients,
+            'n': len(patients),
+            'acute_mean': float(np.mean(data['acute'])) if data['acute'] else None,
+            'fu_mean':    float(np.mean(data['fu']))    if data['fu']    else None,
+        }
+    return result
+
+
+def get_gain_scatter(valid, active, merged=False, n_max=400):
+    """Fig 11 scatter: HIMP Gain vs Ratio 임펄스 데이터."""
+    cat_defs = get_cat_defs(merged)
+    rng = np.random.default_rng(42)
+    result = {}
+    for g in active:
+        result[g] = {}
+        for _, t, d in cat_defs:
+            if t != 'HIMP':
+                continue
+            ck = cat_label(t, d)
+            imps = [i for i in valid if i['group'] == g and i['type'] == t
+                    and match_dir(i['direction'], d)]
+            if len(imps) > n_max:
+                idx = rng.choice(len(imps), n_max, replace=False)
+                imps = [imps[j] for j in idx]
+            result[g][ck] = [{'gain': float(i['gain']), 'ratio': float(i['ratio'])}
+                             for i in imps]
+    return result
+
+
+def build_chart_data(valid, active, acute_g, fu_g, dk='ratio', merged=False):
+    """웹 차트 렌더 전용 데이터 패키지 (build_report과 분리)."""
+    traj = None
+    if acute_g in active and fu_g in active and acute_g != fu_g:
+        traj = get_paired_trajectories(valid, acute_g, fu_g, dk, merged)
+    return _sanitize({
+        'impulse_values': get_impulse_sample(valid, active, dk, merged),
+        'subject_values': get_subject_values(valid, active, dk, merged),
+        'paired_trajectories': traj,
+        'gain_scatter': get_gain_scatter(valid, active, merged),
+    })
+
+
+# ── CSV 생성 (파일 저장 없이 문자열 반환) ─────────────────────
+
+def make_subject_csv(valid, active, merged=False):
+    """사람별 FFT Wide-format CSV 문자열 (v11 export_per_subject_csv 웹 버전)."""
+    cat_defs = get_cat_defs(merged)
+    rows = []
+    for g in active:
+        pnames = sorted(set(i['patient_name'] for i in valid if i['group'] == g))
+        for pname in pnames:
+            fnames = sorted(set(i['filename'] for i in valid
+                            if i['group'] == g and i['patient_name'] == pname))
+            row = {'Group': g, 'Patient_Name': pname,
+                   'Source_Files': ' | '.join(fnames), 'N_Files': len(fnames)}
+            for _, t, d in cat_defs:
+                key = f"{t}_LR" if d == 'All' else f"{t}_{d}"
+                vp = [float(i['ratio'])      for i in valid if i['group'] == g
+                      and i['patient_name'] == pname and i['type'] == t
+                      and match_dir(i['direction'], d)]
+                va = [float(i['area_ratio']) for i in valid if i['group'] == g
+                      and i['patient_name'] == pname and i['type'] == t
+                      and match_dir(i['direction'], d)]
+                row[f"{key}_PowerRatio_mean"] = round(float(np.mean(vp)), 6) if vp else ''
+                row[f"{key}_PowerRatio_n"]    = len(vp)
+                row[f"{key}_AreaRatio_mean"]  = round(float(np.mean(va)), 6) if va else ''
+            rows.append(row)
+    if not rows:
+        return 'No data'
+    df = pd.DataFrame(rows)
+    return df.to_csv(index=False, encoding='utf-8-sig')
+
+
+def make_paired_csv(valid, active, acute_g, fu_g, merged=False):
+    """Paired 분석 CSV 문자열 (v11 export_paired_csv 웹 버전)."""
+    rows = []
+    for dk, dk_lbl in [('ratio', 'PowerRatio'), ('area_ratio', 'AreaRatio'), ('gain', 'Gain')]:
+        paired = get_paired_data(valid, acute_g, fu_g, dk, merged)
+        for cat, data in paired.items():
+            a_vals, f_vals, names = data['acute'], data['fu'], data['names']
+            stat, p, r = wilcoxon_paired(a_vals, f_vals)
+            days_list = []
+            for nm in names:
+                dd = [i.get('days_from_first_global', 0) for i in valid
+                      if i['group'] == fu_g and i['patient_name'] == nm]
+                days_list.append(int(np.mean(dd)) if dd else None)
+            for pname, av, fv, ddays in zip(names, a_vals, f_vals, days_list):
+                rows.append({
+                    'Metric': dk_lbl, 'Category': cat, 'Patient': pname,
+                    'Days_interval': ddays if ddays is not None else '',
+                    'Acute': round(float(av), 6), 'Followup': round(float(fv), 6),
+                    'Delta': round(float(fv - av), 6),
+                    'Delta_pct': round((fv - av) / av * 100 if av else 0, 2),
+                    'Wilcoxon_p': '', 'r_effect': '',
+                })
+            rows.append({
+                'Metric': dk_lbl, 'Category': f'=== {cat} SUMMARY ===',
+                'Patient': f'n={len(a_vals)} pairs',
+                'Days_interval': '',
+                'Acute':    round(float(np.mean(a_vals)), 6) if a_vals else '',
+                'Followup': round(float(np.mean(f_vals)), 6) if f_vals else '',
+                'Delta':    round(float(np.mean(f_vals) - np.mean(a_vals)), 6) if a_vals else '',
+                'Delta_pct': round((np.mean(f_vals) - np.mean(a_vals)) / np.mean(a_vals) * 100
+                                   if a_vals and np.mean(a_vals) else 0, 2),
+                'Wilcoxon_p': round(p, 6) if p is not None else 'n<4',
+                'r_effect':   round(r, 4) if r is not None else 'n<4',
+            })
+    if not rows:
+        return 'No paired data'
+    return pd.DataFrame(rows).to_csv(index=False, encoding='utf-8-sig')
+
+
+def make_stat_csv(report):
+    """통계표 CSV 문자열 — group_comparisons에서 추출."""
+    rows = []
+    gc = report.get('group_comparisons', {})
+    for metric, modes in gc.items():
+        for mode, cats in modes.items():
+            for cat, entry in cats.items():
+                for pw in entry.get('pairwise', []):
+                    rows.append({
+                        'Metric': metric, 'Mode': mode, 'Category': cat,
+                        'Group1': pw['group1'], 'Group2': pw['group2'],
+                        'Test': pw['test'],
+                        'p_raw': pw.get('p_raw', ''), 'p_adj': pw.get('p_adj', ''),
+                        'effect_r': pw.get('effect_r', ''),
+                        'significant': pw.get('significant', ''),
+                    })
+    if not rows:
+        return 'No stats'
+    return pd.DataFrame(rows).to_csv(index=False, encoding='utf-8-sig')

@@ -3,512 +3,596 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>vHIT FFT 분석 — 브라우저 데모</title>
+<title>vHIT FFT 분석 v2</title>
 <style>
-  :root {
-    --bg: #0f1419;
-    --panel: #1a212b;
-    --panel-2: #222c38;
-    --line: #2f3b4a;
-    --ink: #e6edf3;
-    --ink-dim: #8b97a6;
-    --accent: #4fb0c6;       /* 차가운 시안 — 신호/주파수 메타포 */
-    --accent-ink: #0b1418;
-    --hc: #4fb0c6;
-    --vn: #e0833b;
-    --ok: #5cb87a;
-    --warn: #d9a441;
-    --err: #d96a6a;
-    --mono: 'SFMono-Regular', ui-monospace, 'Cascadia Code', Consolas, monospace;
-    --sans: 'Inter', -apple-system, 'Malgun Gothic', 'Segoe UI', sans-serif;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font-family: var(--sans); font-size: 14px; line-height: 1.55;
-    -webkit-font-smoothing: antialiased;
-  }
-  .wrap { max-width: 940px; margin: 0 auto; padding: 28px 20px 80px; }
-
-  header { border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 24px; }
-  .eyebrow {
-    font-family: var(--mono); font-size: 11px; letter-spacing: .18em;
-    text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
-  }
-  h1 { font-size: 26px; margin: 0 0 6px; font-weight: 650; letter-spacing: -.01em; }
-  .sub { color: var(--ink-dim); font-size: 13px; max-width: 640px; }
-  .privacy {
-    margin-top: 14px; display: inline-flex; align-items: center; gap: 8px;
-    background: rgba(92,184,122,.09); border: 1px solid rgba(92,184,122,.3);
-    color: #9fe0b4; padding: 6px 12px; border-radius: 6px; font-size: 12px;
-  }
-  .privacy b { color: #c6f0d4; font-weight: 600; }
-
-  .step { margin-bottom: 22px; background: var(--panel); border: 1px solid var(--line);
-          border-radius: 10px; overflow: hidden; }
-  .step-h {
-    display: flex; align-items: center; gap: 12px; padding: 13px 18px;
-    background: var(--panel-2); border-bottom: 1px solid var(--line);
-  }
-  .step-n {
-    font-family: var(--mono); font-size: 12px; width: 24px; height: 24px;
-    display: grid; place-items: center; border-radius: 5px;
-    background: var(--accent); color: var(--accent-ink); font-weight: 700;
-  }
-  .step-t { font-weight: 600; font-size: 14px; }
-  .step-d { color: var(--ink-dim); font-size: 12px; margin-left: auto; }
-  .step-body { padding: 16px 18px; }
-
-  .group-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
-  .group-row input[type=text] {
-    background: var(--bg); border: 1px solid var(--line); color: var(--ink);
-    padding: 7px 10px; border-radius: 6px; font-family: var(--mono); font-size: 13px; width: 150px;
-  }
-  .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-  .file-label {
-    position: relative; overflow: hidden; display: inline-flex;
-    background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
-    padding: 7px 13px; border-radius: 6px; cursor: pointer; font-size: 13px;
-    transition: border-color .15s;
-  }
-  .file-label:hover { border-color: var(--accent); }
-  .file-label input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .group-stat { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); }
-  .group-stat.loaded { color: var(--ok); }
-
-  button.act {
-    background: var(--accent); color: var(--accent-ink); border: none;
-    padding: 9px 18px; border-radius: 6px; font-weight: 600; font-size: 13px;
-    cursor: pointer; font-family: var(--sans); transition: filter .15s;
-  }
-  button.act:hover { filter: brightness(1.08); }
-  button.act:disabled { background: var(--panel-2); color: var(--ink-dim); cursor: not-allowed; }
-  button.ghost {
-    background: transparent; color: var(--accent); border: 1px solid var(--line);
-    padding: 9px 18px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer;
-  }
-  button.ghost:disabled { color: var(--ink-dim); cursor: not-allowed; }
-  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-
-  .roi { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
-  .roi label { font-size: 12px; color: var(--ink-dim); }
-  .roi input { width: 64px; background: var(--bg); border: 1px solid var(--line);
-               color: var(--ink); padding: 6px 8px; border-radius: 5px; font-family: var(--mono); }
-
-  #boot { display: flex; align-items: center; gap: 10px; color: var(--ink-dim); font-size: 13px; }
-  .spinner { width: 15px; height: 15px; border: 2px solid var(--line);
-             border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  pre.out {
-    background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
-    padding: 14px; font-family: var(--mono); font-size: 12px; line-height: 1.5;
-    overflow-x: auto; max-height: 460px; overflow-y: auto; margin: 0; color: var(--ink);
-    white-space: pre-wrap; word-break: break-word;
-  }
-  .muted { color: var(--ink-dim); }
-  table.stat { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 4px; }
-  table.stat th, table.stat td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); }
-  table.stat th { color: var(--ink-dim); font-weight: 600; font-family: var(--mono); font-size: 11px;
-                  letter-spacing: .04em; text-transform: uppercase; }
-  table.stat td.num { font-family: var(--mono); text-align: right; }
-  .sig-3 { color: var(--ok); font-weight: 700; }
-  .sig-2 { color: #8ed1a0; }
-  .sig-1 { color: var(--warn); }
-  .sig-0 { color: var(--ink-dim); }
-  .hidden { display: none; }
-  .err-box { color: var(--err); font-family: var(--mono); font-size: 12px; }
-  footer { margin-top: 40px; color: var(--ink-dim); font-size: 12px; text-align: center;
-           border-top: 1px solid var(--line); padding-top: 18px; }
+:root{--bg:#0f1419;--panel:#1a212b;--panel2:#222c38;--line:#2f3b4a;--ink:#e6edf3;--dim:#8b97a6;--acc:#4fb0c6;--acc-ink:#0b1418;--ok:#5cb87a;--warn:#d9a441;--err:#d96a6a;--mono:'SFMono-Regular',ui-monospace,Consolas,monospace;--sans:'Inter',-apple-system,'Malgun Gothic','Segoe UI',sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:960px;margin:0 auto;padding:24px 18px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:20px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--acc);margin-bottom:6px}
+h1{font-size:24px;margin:0 0 4px;font-weight:650;letter-spacing:-.01em}
+.sub{color:var(--dim);font-size:13px}
+.privacy{margin-top:12px;display:inline-flex;align-items:center;gap:8px;background:rgba(92,184,122,.09);border:1px solid rgba(92,184,122,.3);color:#9fe0b4;padding:5px 10px;border-radius:6px;font-size:12px}
+.step{margin-bottom:18px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.step-h{display:flex;align-items:center;gap:10px;padding:11px 16px;background:var(--panel2);border-bottom:1px solid var(--line)}
+.sn{font-family:var(--mono);font-size:11px;width:22px;height:22px;display:grid;place-items:center;border-radius:4px;background:var(--acc);color:var(--acc-ink);font-weight:700}
+.st{font-weight:600;font-size:14px}
+.sd{color:var(--dim);font-size:12px;margin-left:auto}
+.sb{padding:14px 16px}
+.group-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+input[type=text],input[type=number]{background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:6px 8px;border-radius:5px;font-family:var(--mono);font-size:12px}
+input[type=text]{width:140px}
+input[type=number]{width:72px}
+.file-btn{position:relative;overflow:hidden;display:inline-flex;background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:6px 12px;border-radius:5px;cursor:pointer;font-size:12px;transition:border-color .15s}
+.file-btn:hover{border-color:var(--acc)}
+.file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.gstat{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.gstat.ok{color:var(--ok)}
+button.act{background:var(--acc);color:var(--acc-ink);border:none;padding:8px 16px;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;transition:filter .15s}
+button.act:hover{filter:brightness(1.08)}
+button.act:disabled{background:var(--panel2);color:var(--dim);cursor:not-allowed}
+button.ghost{background:transparent;color:var(--acc);border:1px solid var(--line);padding:8px 16px;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer}
+button.ghost:hover{background:var(--panel2)}
+button.ghost:disabled{color:var(--dim);cursor:not-allowed}
+button.sm{padding:5px 11px;font-size:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.ctrl{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin-bottom:12px}
+.cg{display:flex;flex-direction:column;gap:5px}
+.cg>.lbl{font-size:11px;color:var(--dim)}
+.cg .inner{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+select{background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:5px 8px;border-radius:5px;font-size:12px;font-family:var(--sans)}
+.rrow{display:flex;gap:12px;align-items:center}
+.rrow label{font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--ink)}
+input[type=checkbox]{accent-color:var(--acc);width:13px;height:13px}
+input[type=radio]{accent-color:var(--acc);width:13px;height:13px}
+#boot{display:flex;align-items:center;gap:10px;color:var(--dim);font-size:13px}
+.spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+pre.out{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;font-family:var(--mono);font-size:11px;overflow-x:auto;max-height:380px;overflow-y:auto;margin:0;color:var(--ink);white-space:pre-wrap;word-break:break-word}
+.muted{color:var(--dim)}
+table.stat{width:100%;border-collapse:collapse;font-size:12px}
+table.stat th,table.stat td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line)}
+table.stat th{color:var(--dim);font-weight:600;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase}
+td.num{font-family:var(--mono);text-align:right}
+.s3{color:var(--ok);font-weight:700}.s2{color:#8ed1a0}.s1{color:var(--warn)}.s0{color:var(--dim)}
+.hidden{display:none}
+.err-txt{color:var(--err);font-family:var(--mono);font-size:12px}
+.sect{margin-top:20px;border-top:1px solid var(--line);padding-top:16px}
+.sect-t{font-size:13px;font-weight:600;margin-bottom:10px}
+.tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px}
+.tab{background:var(--panel2);border:1px solid var(--line);color:var(--dim);padding:4px 12px;border-radius:16px;font-size:11.5px;cursor:pointer;transition:all .15s}
+.tab.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+.panel{display:none}.panel.on{display:block}
+.clbl{font-size:11px;color:var(--dim);margin-bottom:5px;font-family:var(--mono)}
+.cwrap{position:relative;width:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:7px;font-size:11.5px}
+.li{display:flex;align-items:center;gap:4px;color:var(--dim)}
+.ls{width:11px;height:11px;border-radius:2px;flex-shrink:0}
+.pnote{margin-top:5px;font-size:11px;color:var(--dim);font-family:var(--mono);line-height:1.7}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.exp-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+footer{margin-top:36px;color:var(--dim);font-size:11.5px;text-align:center;border-top:1px solid var(--line);padding-top:16px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <div class="eyebrow">vHIT · FFT Frequency-Domain Analysis</div>
-    <h1>vHIT FFT 분석 — 브라우저 데모</h1>
-    <div class="sub">
-      전정신경염(VN) vHIT 데이터의 FFT 기반 Power/Area Ratio를 브라우저 안에서
-      직접 계산합니다. 그룹별 폴더를 올리면 파싱·필터·비모수 통계·JSON 리포트까지
-      한 흐름으로 처리합니다.
-    </div>
-    <div class="privacy">
-      🔒 <span><b>데이터는 이 브라우저를 벗어나지 않습니다.</b>
-      모든 계산은 WASM(Pyodide)으로 로컬 실행되며, 어떤 파일도 서버로 전송되지 않습니다.</span>
-    </div>
-  </header>
+<header>
+  <div class="eyebrow">vHIT · FFT Frequency-Domain Analysis · v2</div>
+  <h1>vHIT FFT 분석 도구</h1>
+  <div class="sub">Fig 5/6/9/10/11 · 필터 · 카테고리 모드 · 사람별·Paired·통계표 CSV</div>
+  <div class="privacy">🔒 <span><b>데이터는 브라우저를 벗어나지 않습니다.</b> 모든 계산은 Pyodide(WASM)으로 로컬 실행됩니다.</span></div>
+</header>
 
-  <div id="boot" class="step-body" style="border:1px solid var(--line); border-radius:10px; margin-bottom:22px;">
-    <span class="spinner"></span>
-    <span id="boot-msg">Python 런타임(Pyodide) 로딩 중… 최초 10–20초 소요됩니다.</span>
-  </div>
-
-  <!-- STEP 1 -->
-  <div class="step">
-    <div class="step-h">
-      <span class="step-n">1</span>
-      <span class="step-t">그룹 폴더 업로드</span>
-      <span class="step-d">그룹명을 먼저 확인한 뒤 폴더를 선택하세요</span>
-    </div>
-    <div class="step-body" id="group-area">
-      <!-- group rows injected -->
-      <div class="btn-row" style="margin-top:8px;">
-        <button class="ghost" id="add-group">＋ 그룹 추가 (최대 5)</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- STEP 2 -->
-  <div class="step">
-    <div class="step-h">
-      <span class="step-n">2</span>
-      <span class="step-t">FFT 분석 구간 & 실행</span>
-      <span class="step-d">ROI 대역에서 eye/head 비율 계산</span>
-    </div>
-    <div class="step-body">
-      <div class="roi">
-        <label>ROI Low <input type="number" id="fft-low" value="10" step="1"> Hz</label>
-        <label>ROI High <input type="number" id="fft-high" value="50" step="1"> Hz</label>
-        <label class="muted">표준 길이 250 samples · fs 250 Hz</label>
-      </div>
-      <div class="btn-row">
-        <button class="act" id="run" disabled>분석 실행</button>
-        <span class="group-stat" id="run-status"></span>
-      </div>
-    </div>
-  </div>
-
-  <!-- STEP 3 -->
-  <div class="step" id="result-step" style="opacity:.5;">
-    <div class="step-h">
-      <span class="step-n">3</span>
-      <span class="step-t">결과 & 내보내기</span>
-      <span class="step-d">그룹간 비교 · 종단 paired · JSON 리포트</span>
-    </div>
-    <div class="step-body">
-      <div id="result-empty" class="muted">분석을 실행하면 결과가 여기에 표시됩니다.</div>
-      <div id="result-body" class="hidden">
-        <div id="summary"></div>
-        <div id="stat-tables" style="margin-top:18px;"></div>
-        <div class="btn-row" style="margin-top:18px;">
-          <button class="act" id="dl-json">📄 JSON 리포트 다운로드</button>
-          <button class="ghost" id="dl-prompt">📝 해석 프롬프트(.md) 다운로드</button>
-          <button class="ghost" id="toggle-raw">전체 JSON 보기</button>
-        </div>
-        <pre class="out hidden" id="raw-json" style="margin-top:14px;"></pre>
-      </div>
-    </div>
-  </div>
-
-  <footer>
-    vhit_core.py · Pyodide WASM · 정적 호스팅 전용 — 데이터 무전송<br>
-    <span class="muted">데모 단계: 코어 추출 + 파싱 + 통계 + JSON 리포트</span>
-  </footer>
+<div id="boot" style="border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin-bottom:18px">
+  <span class="spin"></span><span id="boot-msg">Python 런타임 로딩 중… (최초 10–20초)</span>
 </div>
 
+<!-- ① 그룹 -->
+<div class="step">
+  <div class="step-h"><span class="sn">1</span><span class="st">그룹 폴더 업로드</span><span class="sd">그룹명 먼저 입력 후 폴더 선택</span></div>
+  <div class="sb" id="group-area">
+    <div class="row" style="margin-top:6px">
+      <button class="ghost sm" id="add-group">＋ 그룹 추가 (최대 5)</button>
+      <button class="ghost sm" id="show-match">매칭 현황</button>
+    </div>
+  </div>
+</div>
+
+<!-- ② 설정 -->
+<div class="step">
+  <div class="step-h"><span class="sn">2</span><span class="st">분석 설정</span><span class="sd">필터 · FFT 구간 · 지표 · 종단 그룹</span></div>
+  <div class="sb">
+    <div class="ctrl">
+      <div class="cg">
+        <span class="lbl">필터</span>
+        <div class="inner"><label class="rrow"><input type="checkbox" id="filter-on"> 활성화</label></div>
+        <div id="filter-params" class="hidden" style="margin-top:6px;display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:11.5px;color:var(--ink)">최소 head velocity (°/s) <input type="number" id="min-vel" value="150" style="width:60px;margin-left:4px"></label>
+          <label style="font-size:11.5px;color:var(--ink)">최대 ratio <input type="number" id="max-ratio" value="1.5" step="0.1" style="width:60px;margin-left:4px"></label>
+          <label style="font-size:11.5px;color:var(--ink)"><input type="checkbox" id="gain-flt" checked> Gain ≤ 1.2 제외 (Goggle Slip)</label>
+          <div class="inner" style="gap:8px">
+            <label style="font-size:11.5px;color:var(--ink)"><input type="checkbox" id="use-trim"> 양쪽 trim</label>
+            <input type="number" id="trim-pct" value="5" style="width:44px">
+            <span style="font-size:11px;color:var(--dim)">% (한쪽)</span>
+          </div>
+        </div>
+      </div>
+      <div class="cg">
+        <span class="lbl">FFT 구간</span>
+        <div class="inner">
+          <span style="font-size:12px;color:var(--dim)">Low</span><input type="number" id="fft-low" value="10" style="width:56px">
+          <span style="font-size:12px;color:var(--dim)">High</span><input type="number" id="fft-high" value="50" style="width:56px">
+          <span style="font-size:11px;color:var(--dim)">Hz</span>
+        </div>
+      </div>
+      <div class="cg">
+        <span class="lbl">카테고리 모드</span>
+        <div class="rrow">
+          <label><input type="radio" name="cat" value="split" checked> 4분할 (L/R)</label>
+          <label><input type="radio" name="cat" value="merged"> 2분할 (L+R)</label>
+        </div>
+      </div>
+      <div class="cg">
+        <span class="lbl">분석 지표</span>
+        <select id="metric">
+          <option value="ratio">Power Ratio (제곱)</option>
+          <option value="area_ratio">Area Ratio (선형)</option>
+        </select>
+      </div>
+    </div>
+    <div class="ctrl">
+      <div class="cg">
+        <span class="lbl">종단 그룹</span>
+        <div class="inner">
+          <span style="font-size:12px;color:var(--dim)">Acute</span><select id="acute-sel" style="width:150px"></select>
+          <span style="font-size:12px;color:var(--dim)">Follow-up</span><select id="fu-sel" style="width:150px"></select>
+        </div>
+      </div>
+      <div class="cg">
+        <span class="lbl">다중비교 보정</span>
+        <div class="rrow">
+          <label><input type="radio" name="corr" value="bonferroni" checked> Bonferroni</label>
+          <label><input type="radio" name="corr" value="none"> 없음</label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ③ 실행 -->
+<div class="step">
+  <div class="step-h"><span class="sn">3</span><span class="st">분석 실행</span></div>
+  <div class="sb row"><button class="act" id="run" disabled>분석 실행</button><span class="gstat" id="run-st"></span></div>
+</div>
+
+<!-- ④ 결과 -->
+<div class="step" id="res-step" style="opacity:.5">
+  <div class="step-h"><span class="sn">4</span><span class="st">결과</span><span class="sd">통계 · 차트 · 내보내기</span></div>
+  <div class="sb">
+    <div id="res-empty" class="muted">분석을 실행하면 결과가 여기에 표시됩니다.</div>
+    <div id="res-body" class="hidden">
+      <div id="summary"></div>
+      <div id="stat-tbl" style="margin-top:14px"></div>
+      <div class="sect">
+        <div class="sect-t">차트</div>
+        <div class="tabs" id="chart-tabs">
+          <button class="tab on" data-p="p6">Fig 6 사람평균</button>
+          <button class="tab" data-p="p5">Fig 5 전체임펄스</button>
+          <button class="tab" data-p="p9">Fig 9 궤적</button>
+          <button class="tab" data-p="p10">Fig 10 Gain/FFT</button>
+          <button class="tab" data-p="p11">Fig 11 Scatter</button>
+          <button class="tab" data-p="pe">효과크기 r</button>
+          <button class="tab" data-p="pd">Paired Δ%</button>
+        </div>
+        <div class="panel on" id="p6">
+          <div class="clbl">사람별 평균 — 막대=평균, 점=개별 환자 · 임펄스단위보다 신뢰도 높음</div>
+          <div class="legend" id="leg6"></div>
+          <div class="cwrap" style="height:270px"><canvas id="cv6" role="img" aria-label="사람평균 비교"></canvas></div>
+          <div class="pnote" id="pn6"></div>
+        </div>
+        <div class="panel" id="p5">
+          <div class="clbl">전체 임펄스 — 막대=평균, 점=임펄스(최대 300/셀) · 임펄스 수로 부풀려질 수 있음</div>
+          <div class="legend" id="leg5"></div>
+          <div class="cwrap" style="height:270px"><canvas id="cv5" role="img" aria-label="전체임펄스 비교"></canvas></div>
+          <div class="pnote" id="pn5"></div>
+        </div>
+        <div class="panel" id="p9">
+          <div class="clbl">개인별 회복 궤적 — 회색=개인선, 빨강=그룹 평균선</div>
+          <div class="g2" id="traj-grid">
+            <div><div class="clbl" id="tl0"></div><div class="cwrap" style="height:220px"><canvas id="tr0" role="img" aria-label="궤적 1"></canvas></div><div class="pnote" id="tp0"></div></div>
+            <div><div class="clbl" id="tl1"></div><div class="cwrap" style="height:220px"><canvas id="tr1" role="img" aria-label="궤적 2"></canvas></div><div class="pnote" id="tp1"></div></div>
+            <div><div class="clbl" id="tl2"></div><div class="cwrap" style="height:220px"><canvas id="tr2" role="img" aria-label="궤적 3"></canvas></div><div class="pnote" id="tp2"></div></div>
+            <div><div class="clbl" id="tl3"></div><div class="cwrap" style="height:220px"><canvas id="tr3" role="img" aria-label="궤적 4"></canvas></div><div class="pnote" id="tp3"></div></div>
+          </div>
+        </div>
+        <div class="panel" id="p10">
+          <div class="clbl">Power Ratio vs Gain 병렬 — 같은 카테고리에서 PR 유의 &amp; Gain 비유의 → FFT 우월성 증거</div>
+          <div class="legend" id="leg10"></div>
+          <div class="g2">
+            <div><div class="clbl" style="color:var(--acc)">Power Ratio (사람평균 median)</div>
+              <div class="cwrap" style="height:240px"><canvas id="cv10a" role="img" aria-label="PowerRatio 비교"></canvas></div>
+              <div class="pnote" id="pn10a"></div></div>
+            <div><div class="clbl" style="color:var(--warn)">Gain (사람평균 median) — 점선=정상 기준 1.0</div>
+              <div class="cwrap" style="height:240px"><canvas id="cv10b" role="img" aria-label="Gain 비교"></canvas></div>
+              <div class="pnote" id="pn10b"></div></div>
+          </div>
+        </div>
+        <div class="panel" id="p11">
+          <div class="clbl">Gain × Power Ratio 산점도 (HIMP) — 급성기에 weak 상관 → FFT가 gain과 독립 정보 제공</div>
+          <div class="legend" id="leg11"></div>
+          <div class="g2">
+            <div><div class="clbl">HIMP Left</div><div class="cwrap" style="height:240px"><canvas id="cv11a" role="img" aria-label="HIMP Left scatter"></canvas></div><div class="pnote" id="pn11a"></div></div>
+            <div><div class="clbl">HIMP Right</div><div class="cwrap" style="height:240px"><canvas id="cv11b" role="img" aria-label="HIMP Right scatter"></canvas></div><div class="pnote" id="pn11b"></div></div>
+          </div>
+        </div>
+        <div class="panel" id="pe">
+          <div class="clbl">효과크기 r (rank-biserial) — Power Ratio 사람평균 · |r|>0.5=대효과 · 점선=±0.5</div>
+          <div class="cwrap" style="height:230px"><canvas id="cve" role="img" aria-label="효과크기 r"></canvas></div>
+          <div class="pnote" id="pne"></div>
+        </div>
+        <div class="panel" id="pd">
+          <div class="clbl">Paired Δ% — 급성기→회복기 변화율 · 파랑=선택지표, 주황=Gain</div>
+          <div class="cwrap" style="height:230px"><canvas id="cvd" role="img" aria-label="Paired 변화율"></canvas></div>
+          <div class="pnote" id="pnd"></div>
+        </div>
+      </div>
+      <div class="sect">
+        <div class="sect-t">내보내기</div>
+        <div class="exp-row">
+          <button class="act sm" id="dl-json">📄 JSON 리포트</button>
+          <button class="ghost sm" id="dl-subj">📋 사람별 CSV</button>
+          <button class="ghost sm" id="dl-pair">🔗 Paired CSV</button>
+          <button class="ghost sm" id="dl-stat">📊 통계표 CSV</button>
+          <button class="ghost sm" id="dl-prompt">📝 해석 프롬프트</button>
+          <button class="ghost sm" id="toggle-raw">JSON 보기</button>
+        </div>
+        <pre class="out hidden" id="raw-json" style="margin-top:10px"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+<footer>vhit_core.py · Pyodide WASM · 정적 호스팅 전용 · 데이터 무전송<br><span class="muted">Fig 5/6/9/10/11 · 필터 · 4/2분할 · Power/Area Ratio · 사람별·Paired·통계표 CSV</span></footer>
+</div>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-// ─────────────────────────────────────────────────────────────
-// 상태
-// ─────────────────────────────────────────────────────────────
-let pyodide = null;
-let coreLoaded = false;
-const groups = [
-  { name: 'HC',        color: 'var(--hc)', files: null, result: null },
-  { name: 'VN acute',  color: 'var(--vn)', files: null, result: null },
-];
-const PALETTE = ['#4fb0c6', '#e0833b', '#70ad47', '#9b59b6', '#e74c3c'];
+const PAL=['#4fb0c6','#e0833b','#70ad47','#9b59b6','#e74c3c'];
+let pyodide=null,coreLoaded=false;
+const groups=[{name:'HC',files:null},{name:'VN acute',files:null}];
+let _rep=null,_cd=null,_csvSubj='',_csvPair='',_csvStat='';
+const CI={};
+const INK='#8b97a6',GRID='rgba(47,59,74,0.8)',BG='#1a212b';
 
-// ─────────────────────────────────────────────────────────────
-// euc-kr / utf-8 디코딩 — 파이썬은 인코딩을 모른다 (코어 설계)
-// 환자 한글 파일명·내용이 cp949/euc-kr 혼재이므로 JS에서 해결
-// ─────────────────────────────────────────────────────────────
-function decodeBuffer(buf) {
-  const bytes = new Uint8Array(buf);
-  // UTF-8 BOM 감지
-  if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
-    return new TextDecoder('utf-8').decode(bytes.subarray(3));
-  }
-  // UTF-8 유효성 시도 (fatal); 실패하면 euc-kr 폴백
-  try {
-    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-  } catch (e) {
-    try {
-      return new TextDecoder('euc-kr').decode(bytes);   // cp949 상위호환
-    } catch (e2) {
-      return new TextDecoder('utf-8').decode(bytes);    // 최후: 손실 허용
-    }
-  }
+function decode(buf){
+  const b=new Uint8Array(buf);
+  if(b.length>=3&&b[0]===0xEF&&b[1]===0xBB&&b[2]===0xBF)return new TextDecoder('utf-8').decode(b.subarray(3));
+  try{return new TextDecoder('utf-8',{fatal:true}).decode(b);}
+  catch{try{return new TextDecoder('euc-kr').decode(b);}catch{return new TextDecoder('utf-8').decode(b);}}
+}
+function dl(name,text){
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([text],{type:'application/octet-stream'})),download:name});
+  a.click();URL.revokeObjectURL(a.href);
+}
+function pStar(p){if(p==null)return'–';if(p<0.001)return'***';if(p<0.01)return'**';if(p<0.05)return'*';return'ns';}
+function pFmt(p){if(p==null)return'n/a';if(p<0.001)return'<0.001 ***';if(p<0.01)return p.toFixed(3)+' **';if(p<0.05)return p.toFixed(3)+' *';return p.toFixed(3)+' ns';}
+function sClass(p){if(p==null)return's0';if(p<0.001)return's3';if(p<0.01)return's2';if(p<0.05)return's1';return's0';}
+function mkChart(id,type,data,opts,plugins=[]){
+  if(CI[id])CI[id].destroy();
+  const cv=document.getElementById(id);if(!cv)return;
+  CI[id]=new Chart(cv,{type,data,options:opts,plugins});
+}
+function baseOpts(yLbl,extraY={}){
+  return{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{backgroundColor:BG,titleColor:INK,bodyColor:INK,borderColor:'#2f3b4a',borderWidth:1}},
+    scales:{
+      x:{ticks:{color:INK,font:{size:10},autoSkip:false},grid:{color:GRID}},
+      y:{ticks:{color:INK,font:{size:10}},grid:{color:GRID},title:{display:!!yLbl,text:yLbl||'',color:INK,font:{size:10}},...extraY}
+    }};
+}
+function mkLegend(id,active){
+  const el=document.getElementById(id);if(!el)return;
+  el.innerHTML=active.map((g,i)=>`<span class="li"><span class="ls" style="background:${PAL[i%PAL.length]}"></span>${g}</span>`).join('');
+}
+function hLine(val,color='#4fb0c6aa',dash=[4,4]){
+  return{id:'hl'+Math.random(),afterDraw(c){
+    const{ctx,chartArea,scales}=c;if(!chartArea)return;
+    const y=scales.y.getPixelForValue(val);
+    ctx.save();ctx.beginPath();ctx.setLineDash(dash);ctx.strokeStyle=color;ctx.lineWidth=1.2;
+    ctx.moveTo(chartArea.left,y);ctx.lineTo(chartArea.right,y);ctx.stroke();ctx.restore();
+  }};
 }
 
-// ─────────────────────────────────────────────────────────────
-// UI 빌드
-// ─────────────────────────────────────────────────────────────
-function renderGroups() {
-  const area = document.getElementById('group-area');
-  // 기존 group row 제거 (add 버튼 줄은 보존)
-  area.querySelectorAll('.group-row').forEach(n => n.remove());
-  const addRow = area.querySelector('.btn-row');
-  groups.forEach((g, idx) => {
-    const row = document.createElement('div');
-    row.className = 'group-row';
-    g.color = PALETTE[idx % PALETTE.length];
-    row.innerHTML = `
-      <span class="dot" style="background:${g.color}"></span>
-      <input type="text" value="${g.name}" data-idx="${idx}" class="gname">
-      <label class="file-label">
-        폴더 선택
-        <input type="file" webkitdirectory directory multiple data-idx="${idx}" class="gfiles">
-      </label>
-      <span class="group-stat ${g.files ? 'loaded' : ''}" id="gstat-${idx}">
-        ${g.files ? `${g.files.length}개 파일 선택됨` : '미선택'}
-      </span>`;
-    area.insertBefore(row, addRow);
+document.getElementById('chart-tabs').addEventListener('click',e=>{
+  const btn=e.target.closest('.tab');if(!btn)return;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  btn.classList.add('on');document.getElementById(btn.dataset.p).classList.add('on');
+});
+document.getElementById('filter-on').addEventListener('change',e=>{
+  document.getElementById('filter-params').classList.toggle('hidden',!e.target.checked);
+});
+
+function renderGroups(){
+  const area=document.getElementById('group-area');
+  area.querySelectorAll('.group-row').forEach(n=>n.remove());
+  const addBtn=area.querySelector('.row');
+  groups.forEach((g,i)=>{
+    g.color=PAL[i%PAL.length];
+    const row=document.createElement('div');row.className='group-row';
+    row.innerHTML=`<span class="dot" style="background:${g.color}"></span><input type="text" value="${g.name}" data-i="${i}" class="gname"><label class="file-btn">폴더 선택<input type="file" webkitdirectory directory multiple data-i="${i}" class="gfiles"></label><span class="gstat${g.files?' ok':''}" id="gs-${i}">${g.files?g.files.length+'개 CSV 선택됨':'미선택'}</span>`;
+    area.insertBefore(row,addBtn);
   });
-  // 이벤트 바인딩
-  area.querySelectorAll('.gname').forEach(inp => {
-    inp.onchange = e => { groups[+e.target.dataset.idx].name = e.target.value.trim(); };
+  area.querySelectorAll('.gname').forEach(inp=>inp.onchange=e=>{groups[+e.target.dataset.i].name=e.target.value.trim();syncSels();});
+  area.querySelectorAll('.gfiles').forEach(inp=>inp.onchange=e=>{
+    const csvs=Array.from(e.target.files).filter(f=>f.name.toLowerCase().endsWith('.csv'));
+    groups[+e.target.dataset.i].files=csvs;
+    const el=document.getElementById('gs-'+e.target.dataset.i);
+    el.className='gstat'+(csvs.length?' ok':'');
+    el.textContent=csvs.length?csvs.length+'개 CSV':'CSV 없음';
+    syncSels();updateRun();
   });
-  area.querySelectorAll('.gfiles').forEach(inp => {
-    inp.onchange = e => onFolderPicked(+e.target.dataset.idx, e.target.files);
-  });
-  updateRunState();
+  syncSels();updateRun();
 }
-
-function onFolderPicked(idx, fileList) {
-  const csvs = Array.from(fileList).filter(f => f.name.toLowerCase().endsWith('.csv'));
-  groups[idx].files = csvs;
-  groups[idx].result = null;
-  const stat = document.getElementById('gstat-' + idx);
-  stat.textContent = csvs.length ? `${csvs.length}개 CSV 선택됨` : 'CSV 없음';
-  stat.className = 'group-stat ' + (csvs.length ? 'loaded' : '');
-  updateRunState();
-}
-
-function updateRunState() {
-  const ready = coreLoaded && groups.filter(g => g.files && g.files.length).length >= 1;
-  document.getElementById('run').disabled = !ready;
-}
-
-document.getElementById('add-group').onclick = () => {
-  if (groups.length >= 5) return;
-  groups.push({ name: `Group ${groups.length + 1}`, files: null, result: null });
-  renderGroups();
+document.getElementById('add-group').onclick=()=>{if(groups.length>=5)return;groups.push({name:`Group ${groups.length+1}`,files:null});renderGroups();};
+document.getElementById('show-match').onclick=()=>{
+  if(!_rep){alert('먼저 분석 실행');return;}
+  const lp=_rep.longitudinal_paired_analysis;
+  if(!lp){alert('종단 데이터 없음');return;}
+  const n=lp.metrics?.PowerRatio?.['HIMP Left']?.n_pairs??0;
+  alert(`Acute: ${lp.acute_group}\nFollow-up: ${lp.followup_group}\n매칭 성공: ${n}명\n\n스킵 사유: ${_rep._paired_skipped_reason||'없음'}`);
 };
+function syncSels(){
+  const loaded=groups.filter(g=>g.files&&g.files.length).map(g=>g.name);
+  ['acute-sel','fu-sel'].forEach(id=>{
+    const sel=document.getElementById(id),cur=sel.value;
+    sel.innerHTML=loaded.map(g=>`<option value="${g}">${g}</option>`).join('');
+    if(loaded.includes(cur))sel.value=cur;
+  });
+  const isFu=n=>/follow|f\/u|fu|recover|회복|post/i.test(n);
+  const isCtrl=n=>/hc|normal|control|정상|healthy/i.test(n);
+  const fuSel=document.getElementById('fu-sel'),aSel=document.getElementById('acute-sel');
+  const fuC=loaded.find(g=>isFu(g));if(fuC)fuSel.value=fuC;
+  const nonC=loaded.filter(g=>!isCtrl(g));
+  const aC=nonC.find(g=>g!==fuSel.value);if(aC)aSel.value=aC;
+}
+function updateRun(){document.getElementById('run').disabled=!coreLoaded||!groups.some(g=>g.files&&g.files.length);}
 
-// ─────────────────────────────────────────────────────────────
-// Pyodide 부트
-// ─────────────────────────────────────────────────────────────
-async function boot() {
-  const msg = document.getElementById('boot-msg');
-  try {
-    pyodide = await loadPyodide();
-    msg.textContent = '과학 패키지(numpy/scipy/pandas) 로딩 중…';
-    await pyodide.loadPackage(['numpy', 'scipy', 'pandas']);
-    msg.textContent = 'vhit_core.py 로딩 중…';
-    const coreSrc = await (await fetch('vhit_core.py')).text();
-    pyodide.FS.writeFile('vhit_core.py', coreSrc);
+async function boot(){
+  const msg=document.getElementById('boot-msg');
+  try{
+    pyodide=await loadPyodide();
+    msg.textContent='numpy/scipy/pandas 로딩 중…';
+    await pyodide.loadPackage(['numpy','scipy','pandas']);
+    msg.textContent='vhit_core.py 로딩 중…';
+    const src=await(await fetch('vhit_core.py')).text();
+    pyodide.FS.writeFile('vhit_core.py',src);
     pyodide.runPython('import vhit_core as vc');
-    coreLoaded = true;
-    document.getElementById('boot').innerHTML =
-      '<span style="color:var(--ok)">✓</span> <span class="muted">런타임 준비 완료 — 폴더를 업로드하세요.</span>';
-    updateRunState();
-  } catch (e) {
-    document.getElementById('boot').innerHTML =
-      `<span class="err-box">런타임 로딩 실패: ${e}. 네트워크(cdn.jsdelivr.net) 접근을 확인하세요.</span>`;
-  }
+    coreLoaded=true;
+    document.getElementById('boot').innerHTML='<span style="color:var(--ok)">✓</span> <span class="muted">런타임 준비 완료</span>';
+    updateRun();
+  }catch(e){document.getElementById('boot').innerHTML=`<span class="err-txt">로딩 실패: ${e}</span>`;}
 }
 
-// ─────────────────────────────────────────────────────────────
-// 분석 실행
-// ─────────────────────────────────────────────────────────────
-document.getElementById('run').onclick = runAnalysis;
-
-async function runAnalysis() {
-  const status = document.getElementById('run-status');
-  const runBtn = document.getElementById('run');
-  runBtn.disabled = true;
-  const low = parseFloat(document.getElementById('fft-low').value);
-  const high = parseFloat(document.getElementById('fft-high').value);
-  if (!(low < high)) { status.textContent = 'ROI Low가 High보다 작아야 합니다.'; runBtn.disabled = false; return; }
-
-  const active = groups.filter(g => g.files && g.files.length);
-  try {
-    // 1) 각 그룹 파일 읽기 + 디코딩 + 파이썬 dict 전달
-    let allImpulses = [];
-    const groupSummaries = [];
-    for (const g of active) {
-      status.textContent = `[${g.name}] ${g.files.length}개 파일 읽는 중…`;
-      const fileDict = {};
-      for (const f of g.files) {
-        const buf = await f.arrayBuffer();
-        fileDict[f.name] = decodeBuffer(buf);
-      }
-      // 파이썬으로 dict 전달 → 파싱
-      pyodide.globals.set('js_file_dict', fileDict);  // raw JsProxy → Python에서 .to_py()
-      pyodide.globals.set('js_group', g.name);
-      pyodide.globals.set('js_low', low);
-      pyodide.globals.set('js_high', high);
-      const res = pyodide.runPython(`
+document.getElementById('run').onclick=runAnalysis;
+async function runAnalysis(){
+  const st=document.getElementById('run-st'),runBtn=document.getElementById('run');
+  runBtn.disabled=true;
+  const low=parseFloat(document.getElementById('fft-low').value);
+  const high=parseFloat(document.getElementById('fft-high').value);
+  if(!(low<high)){st.textContent='ROI Low<High 필요';runBtn.disabled=false;return;}
+  const active=groups.filter(g=>g.files&&g.files.length);
+  try{
+    const sums=[];
+    for(const g of active){
+      st.textContent=`[${g.name}] 읽는 중…`;
+      const fd={};
+      for(const f of g.files)fd[f.name]=decode(await f.arrayBuffer());
+      pyodide.globals.set('js_fd',fd);pyodide.globals.set('js_gn',g.name);
+      pyodide.globals.set('js_lo',low);pyodide.globals.set('js_hi',high);
+      const res=pyodide.runPython(`
 import json
-# JsProxy → Python dict, 키/값 모두 str로 명시 변환
-_fd = {str(k): str(v) for k, v in js_file_dict.to_py().items()}
-_r = vc.load_group(_fd, str(js_group), fft_low=float(js_low), fft_high=float(js_high))
-_summary = {'name': js_group, 'n_files': _r['n_files'],
-            'n_impulses': _r['n_impulses'], 'deleted': _r['deleted'],
-            'errors': _r['errors']}
-# 임펄스는 파이썬 측 글로벌에 누적 (head/eye numpy는 JS로 안 넘김)
-if 'ALL_IMP' not in globals(): ALL_IMP = []
+_fd={str(k):str(v) for k,v in js_fd.to_py().items()}
+_r=vc.load_group(_fd,str(js_gn),fft_low=float(js_lo),fft_high=float(js_hi))
+if 'ALL_IMP' not in globals():ALL_IMP=[]
 ALL_IMP.extend(_r['impulses'])
-json.dumps(_summary, ensure_ascii=False)
+json.dumps({'name':str(js_gn),'n_files':_r['n_files'],'n_impulses':_r['n_impulses'],'deleted':_r['deleted'],'errors':_r['errors']},ensure_ascii=False)
       `);
-      groupSummaries.push(JSON.parse(res));
+      sums.push(JSON.parse(res));
     }
-
-    // 2) 방문 회차 부여 + 리포트 생성 (파이썬 측에 누적된 ALL_IMP 사용)
-    status.textContent = '통계 분석 중…';
-    pyodide.globals.set('js_active', active.map(g => g.name));  // raw JsProxy
-    const reportJson = pyodide.runPython(`
+    st.textContent='통계 분석 중…';
+    const fOn=document.getElementById('filter-on').checked;
+    const mV=parseFloat(document.getElementById('min-vel').value)||150;
+    const mR=parseFloat(document.getElementById('max-ratio').value)||1.5;
+    const gF=document.getElementById('gain-flt').checked;
+    const uT=document.getElementById('use-trim').checked;
+    const tP=parseFloat(document.getElementById('trim-pct').value)||5;
+    const merged=document.querySelector('input[name="cat"]:checked').value==='merged';
+    const dk=document.getElementById('metric').value;
+    const acG=document.getElementById('acute-sel').value||'';
+    const fuG=document.getElementById('fu-sel').value||'';
+    pyodide.globals.set('js_active',active.map(g=>g.name));
+    pyodide.globals.set('js_fon',fOn);pyodide.globals.set('js_mv',mV);pyodide.globals.set('js_mr',mR);
+    pyodide.globals.set('js_gf',gF);pyodide.globals.set('js_ut',uT);pyodide.globals.set('js_tp',tP);
+    pyodide.globals.set('js_mg',merged);pyodide.globals.set('js_dk',dk);
+    pyodide.globals.set('js_ag',acG);pyodide.globals.set('js_fg',fuG);
+    pyodide.globals.set('js_lo2',low);pyodide.globals.set('js_hi2',high);
+    const combined=pyodide.runPython(`
 import json
 vc.assign_visit_orders(ALL_IMP)
-_active = [str(g) for g in js_active.to_py()]
-# 데모: 필터 OFF (실데이터 ROI 컷은 코어 apply_filter로 추후 토글)
-_valid = vc.apply_filter(ALL_IMP, active=False)
-# 종단 자동 추론: followup 키워드 그룹
-def _is_fu(n): return any(k in n.lower() for k in ['follow','f/u','fu','recover','회복','2','post'])
-def _is_ctrl(n): return any(k in n.lower() for k in ['hc','normal','control','정상','healthy'])
-_fu = next((g for g in _active if _is_fu(g)), None)
-_non_ctrl = [g for g in _active if not _is_ctrl(g)]
-_acute = next((g for g in _non_ctrl if g != _fu), _active[0] if _active else None)
-if _fu is None and len(_non_ctrl) >= 2:
-    _acute, _fu = _non_ctrl[0], _non_ctrl[1]
-_report = vc.build_report(_valid, _active, _acute or '', _fu or '',
-                          fft_low=js_low, fft_high=js_high,
-                          filter_active=False, tool_version='vhit_web_demo')
-json.dumps(_report, ensure_ascii=False, allow_nan=False)
+_act=[str(g) for g in js_active.to_py()]
+_vld=vc.apply_filter(ALL_IMP,active=bool(js_fon),min_head_vel=float(js_mv),max_ratio=float(js_mr),gain_filter=bool(js_gf))
+_mg=bool(js_mg);_dk=str(js_dk);_ag=str(js_ag);_fg=str(js_fg)
+_rep=vc.build_report(_vld,_act,_ag,_fg,merged=_mg,fft_low=float(js_lo2),fft_high=float(js_hi2),filter_active=bool(js_fon),use_trim=bool(js_ut),trim_pct=float(js_tp),tool_version='vhit_web_v2')
+_cd=vc.build_chart_data(_vld,_act,_ag,_fg,dk=_dk,merged=_mg)
+_sc=vc.make_subject_csv(_vld,_act,merged=_mg)
+_pc=vc.make_paired_csv(_vld,_act,_ag,_fg,merged=_mg)
+_stc=vc.make_stat_csv(_rep)
+json.dumps({'report':_rep,'cd':_cd,'sc':_sc,'pc':_pc,'stc':_stc},ensure_ascii=False,allow_nan=False)
     `);
-    const report = JSON.parse(reportJson);
-    renderResult(report, groupSummaries);
-    status.textContent = '완료 ✓';
-  } catch (e) {
-    status.innerHTML = `<span class="err-box">분석 실패: ${e}</span>`;
-    console.error(e);
-  } finally {
-    runBtn.disabled = false;
-    // 다음 실행 위해 파이썬 누적 초기화
-    try { pyodide.runPython('ALL_IMP = []'); } catch (_) {}
+    const obj=JSON.parse(combined);
+    _rep=obj.report;_cd=obj.cd;_csvSubj=obj.sc;_csvPair=obj.pc;_csvStat=obj.stc;
+    renderResult(_rep,sums,active.map(g=>g.name),dk,merged);
+    st.textContent='완료 ✓';
+  }catch(e){st.innerHTML=`<span class="err-txt">실패: ${e}</span>`;console.error(e);}
+  finally{runBtn.disabled=false;try{pyodide.runPython('ALL_IMP=[]');}catch(_){}}
+}
+
+function renderResult(rep,sums,active,dk,merged){
+  document.getElementById('res-step').style.opacity='1';
+  document.getElementById('res-empty').classList.add('hidden');
+  document.getElementById('res-body').classList.remove('hidden');
+  const meta=rep.metadata;
+  let h=`<div style="font-family:var(--mono);font-size:12px;line-height:1.7">`;
+  h+=`ROI ${meta.fft_roi_hz[0]}–${meta.fft_roi_hz[1]}Hz · 그룹 ${meta.groups.join(', ')} · 필터 ${meta.filter_active?'ON':'OFF'} · Trim ${meta.trim_active?meta.trim_pct_each_side+'%':'OFF'}<br>`;
+  sums.forEach(s=>{const e=s.errors.length?` <span class="err-txt">err:${s.errors.length}</span>`:'';h+=`▪ ${s.name}: ${s.n_files}파일 · ${s.n_impulses}임펄스 · deleted ${s.deleted}${e}<br>`;});
+  h+='</div>';
+  document.getElementById('summary').innerHTML=h;
+  const mKey=dk==='ratio'?'PowerRatio':'AreaRatio';
+  const mLbl=dk==='ratio'?'Power Ratio':'Area Ratio';
+  let st=`<div style="font-weight:600;margin-bottom:5px">${mLbl} — 사람평균 그룹간 비교</div>`;
+  const gc=rep.group_comparisons?.[mKey]?.subject_means;
+  if(gc){
+    st+=`<table class="stat"><tr><th>카테고리</th><th>비교</th><th>p(adj)</th><th>r</th></tr>`;
+    for(const[cat,e]of Object.entries(gc))(e.pairwise||[]).forEach(pw=>{
+      st+=`<tr><td>${cat}</td><td class="muted">${pw.group1} vs ${pw.group2}</td><td class="num ${sClass(pw.p_adj)}">${pFmt(pw.p_adj)}</td><td class="num">${pw.effect_r!=null?pw.effect_r.toFixed(2):'–'}</td></tr>`;
+    });
+    st+='</table>';
   }
+  const lp=rep.longitudinal_paired_analysis;
+  if(lp?.metrics){
+    st+=`<div style="font-weight:600;margin:12px 0 5px">종단 Paired — ${lp.acute_group} → ${lp.followup_group}</div>`;
+    st+=`<table class="stat"><tr><th>지표·카테고리</th><th>n쌍</th><th>Δ%</th><th>Wilcoxon p</th><th>r</th></tr>`;
+    for(const m of['PowerRatio','Gain'])for(const[cat,d]of Object.entries(lp.metrics[m]||{})){
+      if(!d.n_pairs)continue;
+      st+=`<tr><td>${m}·${cat}</td><td class="num">${d.n_pairs}</td><td class="num">${d.delta_pct!=null?d.delta_pct+'%':'–'}</td><td class="num ${sClass(d.wilcoxon_p)}">${pFmt(d.wilcoxon_p)}</td><td class="num">${d.wilcoxon_r!=null?d.wilcoxon_r.toFixed(2):'–'}</td></tr>`;
+    }
+    st+='</table>';
+  }else if(rep._paired_skipped_reason){
+    st+=`<div class="muted" style="margin-top:8px">종단 미수행: ${rep._paired_skipped_reason}</div>`;
+  }
+  document.getElementById('stat-tbl').innerHTML=st;
+  document.getElementById('raw-json').textContent=JSON.stringify(rep,null,2);
+  renderCharts(rep,_cd,active,dk,merged);
 }
 
-// ─────────────────────────────────────────────────────────────
-// 결과 렌더
-// ─────────────────────────────────────────────────────────────
-function sigClass(p) {
-  if (p == null) return 'sig-0';
-  if (p < 0.001) return 'sig-3';
-  if (p < 0.01) return 'sig-2';
-  if (p < 0.05) return 'sig-1';
-  return 'sig-0';
-}
-function pFmt(p) {
-  if (p == null) return 'n/a';
-  if (p < 0.001) return '<0.001 ***';
-  if (p < 0.01) return p.toFixed(3) + ' **';
-  if (p < 0.05) return p.toFixed(3) + ' *';
-  return p.toFixed(3) + ' ns';
-}
+function renderCharts(rep,cd,active,dk,merged){
+  const ds=rep.descriptive_statistics;const gc=rep.group_comparisons;const lp=rep.longitudinal_paired_analysis;
+  const mKey=dk==='ratio'?'PowerRatio':'AreaRatio';const mLbl=dk==='ratio'?'Power Ratio':'Area Ratio';
+  const cats=merged?['HIMP (L+R)','SHIMP (L+R)']:['HIMP Left','HIMP Right','SHIMP Left','SHIMP Right'];
+  const catS=merged?['HIMP','SHIMP']:['HIMP L','HIMP R','SHIMP L','SHIMP R'];
+  const n=active.length;
 
-function renderResult(report, summaries) {
-  document.getElementById('result-step').style.opacity = '1';
-  document.getElementById('result-empty').classList.add('hidden');
-  document.getElementById('result-body').classList.remove('hidden');
+  function pNote(metric,mode){
+    const sm=gc?.[metric]?.[mode];if(!sm)return'';
+    return cats.map((cat,ci)=>{
+      const pws=sm[cat]?.pairwise||[];
+      return catS[ci]+': '+pws.map(pw=>`${pw.group1.slice(0,6)}↔${pw.group2.slice(0,6)} ${pStar(pw.p_adj)} r=${(pw.effect_r??0).toFixed(2)}`).join(' ');
+    }).join(' | ');
+  }
 
-  // 요약
-  const meta = report.metadata;
-  let html = `<div style="font-family:var(--mono); font-size:12.5px; line-height:1.7;">`;
-  html += `<span class="muted">ROI</span> ${meta.fft_roi_hz[0]}–${meta.fft_roi_hz[1]} Hz &nbsp;·&nbsp; `;
-  html += `<span class="muted">그룹</span> ${meta.groups.join(', ')}<br>`;
-  summaries.forEach(s => {
-    const errTxt = s.errors.length ? ` <span class="err-box">err:${s.errors.length}</span>` : '';
-    html += `<span class="muted">▪</span> ${s.name}: ${s.n_files}파일 · ${s.n_impulses}임펄스 · deleted ${s.deleted}${errTxt}<br>`;
+  // shared jitter fn
+  function barJitter(catKey,groupVals){
+    const barSets=active.map((g,gi)=>({type:'bar',label:g,data:cats.map(cat=>{const v=groupVals[g]?.[cat];return v?.length?v.reduce((a,b)=>a+b,0)/v.length:null;}),backgroundColor:PAL[gi%PAL.length]+'cc',borderColor:PAL[gi%PAL.length],borderWidth:1}));
+    const scSets=active.flatMap((g,gi)=>{
+      const pts=[];
+      cats.forEach((cat,ci)=>(groupVals[g]?.[cat]||[]).forEach(v=>{const base=ci+(n>1?(gi/(n-1)-0.5)*0.3:0);pts.push({x:base+(Math.random()-0.5)*0.04,y:v});}));
+      return[{type:'scatter',label:g+'_p',data:pts,backgroundColor:PAL[gi%PAL.length]+'55',pointRadius:3,borderWidth:0}];
+    });
+    return[...barSets,...scSets];
+  }
+
+  // Fig 6
+  mkLegend('leg6',active);
+  mkChart('cv6','bar',{labels:catS,datasets:barJitter(mKey,cd?.subject_values||{})},{...baseOpts(mLbl+' (subject mean)')});
+  document.getElementById('pn6').innerHTML=pNote(mKey,'subject_means');
+
+  // Fig 5
+  mkLegend('leg5',active);
+  mkChart('cv5','bar',{labels:catS,datasets:barJitter(mKey,cd?.impulse_values||{})},{...baseOpts(mLbl+' (impulse mean)')});
+  document.getElementById('pn5').innerHTML=pNote(mKey,'all_impulses');
+
+  // Fig 9
+  if(lp&&cd?.paired_trajectories){
+    cats.forEach((cat,ci)=>{
+      const tlEl=document.getElementById('tl'+ci);const tpEl=document.getElementById('tp'+ci);
+      if(tlEl)tlEl.textContent=cat;
+      const traj=cd.paired_trajectories[cat];
+      if(!traj||!traj.patients.length){if(tpEl)tpEl.textContent='매칭 없음';return;}
+      const pts=traj.patients;
+      const xLbls=[lp.acute_group,lp.followup_group];
+      const dsets=pts.map(p=>({type:'line',label:p.name,data:[{x:0,y:p.acute},{x:1,y:p.fu}],borderColor:'#ffffff20',backgroundColor:'transparent',pointBackgroundColor:'#ffffff50',pointRadius:4,tension:0,borderWidth:1}));
+      const aM=pts.reduce((s,p)=>s+p.acute,0)/pts.length;
+      const fM=pts.reduce((s,p)=>s+p.fu,0)/pts.length;
+      dsets.push({type:'line',label:'Mean',data:[{x:0,y:aM},{x:1,y:fM}],borderColor:'#e05a4e',backgroundColor:'transparent',pointBackgroundColor:'#e05a4e',pointRadius:7,tension:0,borderWidth:3});
+      const opts={...baseOpts(mLbl)};
+      opts.scales.x={type:'linear',min:-0.3,max:1.3,ticks:{color:INK,font:{size:10},stepSize:1,callback:v=>xLbls[v]||''},grid:{color:GRID}};
+      mkChart('tr'+ci,'line',{labels:xLbls,datasets:dsets},opts);
+      const s=lp.metrics[mKey]?.[cat];
+      const pStr=s?.wilcoxon_p!=null?`p=${s.wilcoxon_p.toFixed(4)} r=${(s.wilcoxon_r||0).toFixed(2)}`:'n<4';
+      const dPct=s?.delta_pct!=null?`Δ${s.delta_pct>0?'+':''}${s.delta_pct}%`:'';
+      if(tpEl)tpEl.textContent=`n=${pts.length}쌍 · ${pStr} · ${dPct}`;
+    });
+  }else{document.getElementById('tp0').textContent='종단 Paired 데이터 없음';}
+
+  // Fig 10
+  mkLegend('leg10',active);
+  ['cv10a','cv10b'].forEach((cvId,mi)=>{
+    const metric=mi===0?mKey:'Gain';const lbl=mi===0?mLbl:'Gain';
+    const barSets=active.map((g,gi)=>({label:g,data:cats.map(cat=>ds?.[metric]?.[cat]?.[g]?.median??null),backgroundColor:PAL[gi%PAL.length]+'cc',borderColor:PAL[gi%PAL.length],borderWidth:1}));
+    const eY=mi===1?{min:0,max:1.4}:{};
+    const plgs=mi===1?[hLine(1.0)]:[]; 
+    mkChart(cvId,'bar',{labels:catS,datasets:barSets},{...baseOpts(lbl+' (median)',eY)},plgs);
+    const sm=gc?.[metric]?.subject_means;
+    document.getElementById(['pn10a','pn10b'][mi]).innerHTML=sm?cats.map((cat,ci)=>{const pws=sm[cat]?.pairwise||[];return catS[ci]+': '+pws.map(pw=>pStar(pw.p_adj)).join('/')}).join(' | '):'';
   });
-  html += `</div>`;
-  document.getElementById('summary').innerHTML = html;
 
-  // 통계 테이블 — PowerRatio subject_means (가장 신뢰도 높은 분석)
-  let st = '';
-  const gc = report.group_comparisons?.PowerRatio?.subject_means;
-  if (gc) {
-    st += `<div style="font-weight:600; margin-bottom:6px;">Power Ratio — 사람평균 그룹간 비교 <span class="muted" style="font-weight:400;">(임펄스단위보다 보수적)</span></div>`;
-    st += `<table class="stat"><tr><th>카테고리</th><th>비교</th><th>p (adj)</th><th>effect r</th></tr>`;
-    for (const [cat, entry] of Object.entries(gc)) {
-      (entry.pairwise || []).forEach(pw => {
-        st += `<tr><td>${cat}</td><td class="muted">${pw.group1} vs ${pw.group2}</td>`;
-        st += `<td class="num ${sigClass(pw.p_adj)}">${pFmt(pw.p_adj)}</td>`;
-        st += `<td class="num">${pw.effect_r != null ? pw.effect_r.toFixed(2) : '–'}</td></tr>`;
-      });
-    }
-    st += `</table>`;
-  }
+  // Fig 11
+  mkLegend('leg11',active);
+  ['HIMP Left','HIMP Right'].forEach((cat,si)=>{
+    const dsets=active.map((g,gi)=>({label:g,data:(cd?.gain_scatter?.[g]?.[cat]||[]).map(p=>({x:p.gain,y:p.ratio})),backgroundColor:PAL[gi%PAL.length]+'66',pointRadius:3,borderWidth:0}));
+    const opts={...baseOpts(''),scales:{x:{ticks:{color:INK,font:{size:10}},grid:{color:GRID},title:{display:true,text:'Gain',color:INK,font:{size:10}}},y:{ticks:{color:INK,font:{size:10}},grid:{color:GRID},title:{display:true,text:mLbl,color:INK,font:{size:10}}}}};
+    mkChart('cv11'+['a','b'][si],'scatter',{datasets:dsets},opts);
+    const corr=rep.gain_vs_fft_correlation;
+    document.getElementById('pn11'+['a','b'][si]).textContent=active.map(g=>{const c=corr?.[g]?.[cat];return c?`${g}: ρ=${c.spearman_rho}(${c.interpretation})`:null;}).filter(Boolean).join(' · ');
+  });
 
-  // 종단 paired
-  const lp = report.longitudinal_paired_analysis;
-  if (lp && lp.metrics) {
-    st += `<div style="font-weight:600; margin:18px 0 6px;">종단 Paired — ${lp.acute_group} → ${lp.followup_group}</div>`;
-    st += `<table class="stat"><tr><th>지표 · 카테고리</th><th>n쌍</th><th>Δ%</th><th>Wilcoxon p</th><th>r</th></tr>`;
-    for (const metric of ['PowerRatio', 'Gain']) {
-      const m = lp.metrics[metric];
-      if (!m) continue;
-      for (const [cat, d] of Object.entries(m)) {
-        if (d.n_pairs < 4) continue;
-        st += `<tr><td>${metric} · ${cat}</td><td class="num">${d.n_pairs}</td>`;
-        st += `<td class="num">${d.delta_pct != null ? d.delta_pct + '%' : '–'}</td>`;
-        st += `<td class="num ${sigClass(d.wilcoxon_p)}">${pFmt(d.wilcoxon_p)}</td>`;
-        st += `<td class="num">${d.wilcoxon_r != null ? d.wilcoxon_r.toFixed(2) : '–'}</td></tr>`;
-      }
-    }
-    st += `</table>`;
-    st += `<div class="muted" style="font-size:11.5px; margin-top:6px;">
-      핵심 가설: 같은 카테고리에서 Power Ratio는 유의하나 Gain은 유의하지 않으면 → FFT 우월성의 직접 증거</div>`;
-  } else if (report._paired_skipped_reason) {
-    st += `<div class="muted" style="margin-top:16px;">종단 paired 미수행: ${report._paired_skipped_reason}</div>`;
-  }
-  document.getElementById('stat-tables').innerHTML = st;
+  // 효과크기 r
+  {const sm=gc?.[mKey]?.subject_means;
+  if(sm){
+    const pls=new Set();cats.forEach(cat=>(sm[cat]?.pairwise||[]).forEach(pw=>pls.add(`${pw.group1}↔${pw.group2}`)));
+    const plArr=[...pls];const cols=['#4fb0c6','#e0833b','#70ad47','#9b59b6'];
+    const dsets=plArr.map((pl,pi)=>({label:pl,data:cats.map(cat=>(sm[cat]?.pairwise||[]).find(pw=>`${pw.group1}↔${pw.group2}`===pl)?.effect_r??null),backgroundColor:cats.map(cat=>{const r=(sm[cat]?.pairwise||[]).find(pw=>`${pw.group1}↔${pw.group2}`===pl)?.effect_r??0;return cols[pi%cols.length]+(r>=0?'cc':'55');}),borderColor:cols[pi%cols.length],borderWidth:1}));
+    const opts={...baseOpts('effect r',{min:-1,max:1}),indexAxis:'y'};
+    opts.scales.x={...opts.scales.x,title:{display:true,text:'r (−1~+1)',color:INK,font:{size:10}}};
+    const refPl={id:'r05',afterDraw(c){const{ctx,chartArea,scales}=c;if(!chartArea)return;[0,0.5,-0.5].forEach((v,i)=>{const x=scales.x.getPixelForValue(v);ctx.save();ctx.beginPath();ctx.setLineDash(i===0?[1,0]:[4,4]);ctx.strokeStyle=i===0?'#4fb0c6aa':'#ffffff22';ctx.lineWidth=1.2;ctx.moveTo(x,chartArea.top);ctx.lineTo(x,chartArea.bottom);ctx.stroke();ctx.restore();});}};
+    mkChart('cve','bar',{labels:catS,datasets:dsets},opts,[refPl]);
+    document.getElementById('pne').innerHTML=plArr.map((pl,pi)=>cats.map((cat,ci)=>{const pw=(sm[cat]?.pairwise||[]).find(p=>`${p.group1}↔${p.group2}`===pl);return pw?`${catS[ci]} ${pStar(pw.p_adj)}`:''}).filter(Boolean).join(' ')).join(' | ');
+  }}
 
-  // 전체 JSON 보관
-  window._lastReport = report;
-  document.getElementById('raw-json').textContent = JSON.stringify(report, null, 2);
+  // Paired Δ%
+  {if(lp?.metrics){
+    const mC=['#4fb0c6','#e0833b'];
+    const dsets=[mKey,'Gain'].map((m,mi)=>({label:mi===0?mLbl:'Gain',data:cats.map(cat=>lp.metrics[m]?.[cat]?.delta_pct??null),backgroundColor:cats.map(cat=>{const v=lp.metrics[m]?.[cat]?.delta_pct??0;return mC[mi]+(v>=0?'cc':'55');}),borderColor:mC[mi],borderWidth:1}));
+    mkChart('cvd','bar',{labels:catS,datasets:dsets},{...baseOpts('Δ%')},[hLine(0,'#4fb0c6aa',[1,0])]);
+    const nP=lp.metrics[mKey]?.['HIMP Left']?.n_pairs??lp.metrics[mKey]?.[cats[0]]?.n_pairs??0;
+    document.getElementById('pnd').innerHTML=`${lp.acute_group}→${lp.followup_group} · ${nP}쌍 · ${nP>=4?'Wilcoxon 수행':'n<4(방향만 참고)'}<br>`+cats.map((cat,ci)=>{const pr=lp.metrics[mKey]?.[cat];const ga=lp.metrics.Gain?.[cat];return pr?`${catS[ci]} ${mLbl}:${pr.delta_pct!=null?pr.delta_pct+'%':'–'} Gain:${ga?.delta_pct!=null?ga.delta_pct+'%':'–'}`:'';}).filter(Boolean).join(' | ');
+  }else{document.getElementById('pnd').textContent='종단 데이터 없음';}}
 }
 
-// 다운로드
-function download(filename, text) {
-  const blob = new Blob([text], { type: 'application/octet-stream' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-}
-document.getElementById('dl-json').onclick = () => {
-  if (window._lastReport)
-    download('vHIT_analysis_claude.json', JSON.stringify(window._lastReport, null, 2));
+document.getElementById('dl-json').onclick=()=>_rep&&dl('vHIT_analysis_claude.json',JSON.stringify(_rep,null,2));
+document.getElementById('dl-subj').onclick=()=>_csvSubj&&dl('PerSubject_FFT_Values.csv',_csvSubj);
+document.getElementById('dl-pair').onclick=()=>_csvPair&&dl('Paired_Analysis.csv',_csvPair);
+document.getElementById('dl-stat').onclick=()=>_csvStat&&dl('Stat_Table.csv',_csvStat);
+document.getElementById('dl-prompt').onclick=()=>{
+  if(!_rep)return;
+  const m=_rep.metadata;
+  dl('vHIT_prompt.md','# vHIT FFT 분석 결과 해석 요청\n\n그룹: '+m.groups.join(', ')+'\nROI: '+m.fft_roi_hz[0]+'–'+m.fft_roi_hz[1]+' Hz · 필터: '+(m.filter_active?'ON':'OFF')+'\n\n## 해석 요청\n1. 어느 카테고리·지표가 그룹을 가장 강하게 분리하는가? (사람평균 우선)\n2. 종단에서 Power Ratio 유의 & Gain 비유의 카테고리가 있는가? (FFT 우월성)\n3. median(IQR), p, r 함께 보고. n<15이면 한계 명시.\n4. Results 초안 3-4문장.\n');
 };
-document.getElementById('dl-prompt').onclick = () => {
-  const prompt = pyodide.runPython(`
-import json
-vc_prompt = "# vHIT FFT 분석 결과 해석 요청\\n\\n첨부 JSON(vHIT_analysis_claude.json)을 신경이과 전문가 관점에서 해석해 주세요.\\n핵심: (1) 어느 카테고리·지표가 그룹을 가장 강하게 분리하는가 (사람평균 우선) "
-vc_prompt += "(2) 종단에서 Power Ratio는 유의하나 Gain은 유의하지 않은 카테고리가 있는가 (FFT 우월성) "
-vc_prompt += "(3) median(IQR)·p·효과크기 r 함께 보고, n<15 한계 명시.\\n"
-vc_prompt
-  `);
-  download('vHIT_analysis_prompt.md', prompt);
-};
-document.getElementById('toggle-raw').onclick = () => {
-  document.getElementById('raw-json').classList.toggle('hidden');
-};
+document.getElementById('toggle-raw').onclick=()=>document.getElementById('raw-json').classList.toggle('hidden');
 
-// ─────────────────────────────────────────────────────────────
-renderGroups();
-boot();
+renderGroups();boot();
 </script>
 </body>
 </html>
