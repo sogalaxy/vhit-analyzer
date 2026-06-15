@@ -345,13 +345,15 @@ async function runAnalysis() {
         fileDict[f.name] = decodeBuffer(buf);
       }
       // 파이썬으로 dict 전달 → 파싱
-      pyodide.globals.set('js_file_dict', pyodide.toPy(fileDict));
+      pyodide.globals.set('js_file_dict', fileDict);  // raw JsProxy → Python에서 .to_py()
       pyodide.globals.set('js_group', g.name);
       pyodide.globals.set('js_low', low);
       pyodide.globals.set('js_high', high);
       const res = pyodide.runPython(`
 import json
-_r = vc.load_group(js_file_dict.to_py(), js_group, fft_low=js_low, fft_high=js_high)
+# JsProxy → Python dict, 키/값 모두 str로 명시 변환
+_fd = {str(k): str(v) for k, v in js_file_dict.to_py().items()}
+_r = vc.load_group(_fd, str(js_group), fft_low=float(js_low), fft_high=float(js_high))
 _summary = {'name': js_group, 'n_files': _r['n_files'],
             'n_impulses': _r['n_impulses'], 'deleted': _r['deleted'],
             'errors': _r['errors']}
@@ -365,11 +367,11 @@ json.dumps(_summary, ensure_ascii=False)
 
     // 2) 방문 회차 부여 + 리포트 생성 (파이썬 측에 누적된 ALL_IMP 사용)
     status.textContent = '통계 분석 중…';
-    pyodide.globals.set('js_active', pyodide.toPy(active.map(g => g.name)));
+    pyodide.globals.set('js_active', active.map(g => g.name));  // raw JsProxy
     const reportJson = pyodide.runPython(`
 import json
 vc.assign_visit_orders(ALL_IMP)
-_active = js_active.to_py()
+_active = [str(g) for g in js_active.to_py()]
 # 데모: 필터 OFF (실데이터 ROI 컷은 코어 apply_filter로 추후 토글)
 _valid = vc.apply_filter(ALL_IMP, active=False)
 # 종단 자동 추론: followup 키워드 그룹
